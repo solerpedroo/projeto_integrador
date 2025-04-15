@@ -4,7 +4,7 @@ S = 1
 s = 1
 N = 0
 n = 1
-1
+
 #entrada dos dados (input)
 
 print("Início do programa")
