@@ -1,6 +1,172 @@
 #importação de bibliotecas
 import mysql.connector
+# Importando uma função que multiplica matrizes e outra que as transp da biblioteca mumpy -> usadas nas funções de cripto e descriptografia
+from numpy import matmul, transpose
+#importar biblioteca para limpar o terminal 
 import os
+
+# Declarando a tabela do alfabeto
+T = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+
+chave = [[4,3],[1,2]]
+
+def criptografia_palavras(chave, nome):
+
+    nome = nome.upper().replace(' ', '')
+
+    # Vetor de indexação
+    I = []
+
+    # Indexando
+    for i in range (len(nome)):
+        pos = T.index(nome[i])
+        if pos == '25':
+            I.append(0)
+        else:
+            I.append(pos+1)   
+
+    # Caso a palavra tenha um tamanho ímpar, repete a última letra 
+    if len(nome)%2 != 0:
+        pos = T.index(nome[-1])
+        if pos == '25':
+            I.append(0)
+        else:
+            I.append(pos+1)
+
+    # Declarando a matriz de texto comum
+    P = [[],[]]
+
+    # Indexan
+    for i in range(len(I)):
+        if i%2 == 0:
+            P[0].append(I[i])
+        else:
+            P[1].append(I[i])
+
+    # Obtendo a matriz de texto cifrado
+    C = matmul(chave, P)
+
+    # Convertendo os valores para os números existentes no conjunto alfabeto
+    for i in range(len(C)):
+        for j in range(len(C[0])):
+            C[i][j] %= 26
+            if C[i][j] == 0:
+                C[i][j] = 26
+
+    # Declarando o vetor que armazena as letras convertidas
+    TC = []
+
+    # Convertendo os números em letras
+    for i in range(len(C)):
+        for j in range(len(C[0])):
+            TC.append(T[C[i][j]-1])
+
+    # Declarando a matriz a ser usada na exibição
+    cripto = [[],[]]
+
+    # Ajustando as posições das letras na matriz
+    for i in range(int(len(TC)/2)):
+        cripto[0].append(TC[i])
+        cripto[1].append(TC[int(len(TC)/2)+i])
+
+    # Transpondo a matriz para facilitar a exibição
+    cripto = transpose(cripto)
+
+    # Obtendo o texto criptografado
+    texto_cripto = ''
+    for i in range(len(cripto)):
+        for j in range(len(cripto[0])):
+            texto_cripto += cripto[i][j]
+
+    # Retornando o texto criptografado
+    return texto_cripto
+
+def descriptografia_palavras (chave, nome_cifrado):
+    # Tabela dos inversos no Z26
+    TABELA = [[1, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23, 25],[1, 9, 21, 15, 3, 19, 7, 23, 11, 5, 17, 25]]
+
+    # Obtendo o determinante
+    det = chave[0][0]*chave[1][1] - chave[0][1] * chave[1][0]
+    # Obtendo o equivalente do determinante no conjunto Z6
+    det %= 26
+    # Encontrando o determinante na tabela dos inversos
+    indice_inverso = TABELA[0].index(det)
+    # Encontrando o equivalente do determinante na tabela dos inversos
+    inverso = TABELA[1][indice_inverso]
+    # Montando a matriz inversa
+    matriz_inversa = [[chave[1][1]*inverso, chave[0][1]*(-1)*inverso],[chave[1][0]*(-1)*inverso, chave[0][0]*inverso]]
+
+    nome_cifrado = nome_cifrado.upper().replace(' ', '')
+
+    # Vetor de indexação de decifragem
+    V = []
+    # Indexando
+    for i in range (len(nome_cifrado)):
+        pos = T.index(nome_cifrado[i])
+        if pos == '25':
+            V.append(0)
+        else:
+            V.append(pos+1)
+
+    # Declarando a matriz de texto comum
+    P = [[],[]]
+
+    # Indexando
+    for i in range(len(V)):
+        if i%2 == 0:
+            P[0].append(V[i])
+        else:
+            P[1].append(V[i])
+
+    # Declarando a matriz de texto comum
+    M = matmul(matriz_inversa,P)
+
+    # Convertendo os valores para os números existentes no conjunto alfabeto
+    for i in range(len(M)):
+        for j in range(len(M[0])):
+            M[i][j] %= 26
+            if M[i][j] == 0:
+                M[i][j] = 26
+
+    # Declarando o vetor que armazena as letras convertidas
+    TD = []
+
+    # Convertendo os números em letras
+    for i in range(len(M)):
+        for j in range(len(M[0])):
+            TD.append(T[M[i][j]-1])
+
+    # Declarando a matriz a ser usada na exibição
+    descripto = [[],[]]
+
+    # Ajustando as posições das letras na matriz
+    for i in range(int(len(TD)/2)):
+        descripto[0].append(TD[i])
+        descripto[1].append(TD[int(len(TD)/2)+i])
+
+    # Transpondo a matriz para facilitar a exibição
+    descripto = transpose(descripto)
+
+    # Obtendo o texto criptografado
+    texto_descripto = ''
+    for i in range(len(descripto)):
+        for j in range(len(descripto[0])):
+            texto_descripto += descripto[i][j]
+
+    # Excluindo a última letra do texto, caso ela seja repetida
+    if texto_descripto[-1] == texto_descripto[-2]:
+        texto_descripto = texto_descripto[:len(texto_descripto)-1]
+
+    # Adicionando espaçamento para garantir uma melhor exibição dos dados
+    if texto_descripto == 'BAIXASUSTENTABILIDADE':
+        texto_descripto = 'BAIXA SUSTENTABILIDADE'
+    elif texto_descripto == 'MODERADASUSTENTABILIDADE':
+        texto_descripto = 'MODERADA SUSTENTABILIDADE'
+    elif texto_descripto == 'ALTASUSTENTABILIDADE':
+        texto_descripto = 'ALTA SUSTENTABILIDADE'
+
+    # Retornando o texto descriptgrafado
+    return texto_descripto
 
 #definição dos valores de S e N
 S = 1 
@@ -197,7 +363,12 @@ while opcao != "6":
         VALUES (%s, %s, %s, %s, %s)
         """
 
-        valores_niveis = (id_usuario, nivel_agua, nivel_energia, nivel_residuos, nivel_transporte)
+        valores_niveis = (id_usuario, 
+                          criptografia_palavras(chave, nivel_agua), 
+                          criptografia_palavras(chave, nivel_energia), 
+                          criptografia_palavras(chave, nivel_residuos), 
+                          criptografia_palavras(chave, nivel_transporte))
+        
         cursor.execute(sql_insert_niveis, valores_niveis)
         conexao.commit()
 
@@ -373,7 +544,7 @@ while opcao != "6":
                 Nivel_MeioDeTransporte = %s
             WHERE ID_Usuario = %s
             """
-            valores_niveis = (nivel_agua, nivel_energia, nivel_residuos, nivel_transporte, id_alterar)
+            valores_niveis = (criptografia_palavras(chave, nivel_agua), criptografia_palavras(chave, nivel_energia), criptografia_palavras(chave, nivel_residuos), criptografia_palavras(chave, nivel_transporte), id_alterar)
             cursor.execute(sql_update_niveis, valores_niveis)
             conexao.commit()
             
@@ -526,7 +697,7 @@ while opcao != "6":
                     Nivel_MeioDeTransporte = %s
                 WHERE ID_Usuario = %s
                 """
-                valores_niveis = (nivel_agua, nivel_energia, nivel_residuos, nivel_transporte, id_alterar)
+                valores_niveis = (criptografia_palavras(chave, nivel_agua), criptografia_palavras(chave, nivel_energia), criptografia_palavras(chave, nivel_residuos), criptografia_palavras(chave, nivel_transporte), id_alterar)
                 cursor.execute(sql_update_niveis, valores_niveis)
                 conexao.commit()
                 
