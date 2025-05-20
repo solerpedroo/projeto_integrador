@@ -2,6 +2,7 @@
 import mysql.connector
 # Importando uma função que multiplica matrizes e outra que as transp da biblioteca mumpy -> usadas nas funções de cripto e descriptografia
 from numpy import matmul, transpose
+import numpy as np
 #importar biblioteca para limpar o terminal 
 import os
 
@@ -81,83 +82,68 @@ def criptografia_palavras(chave, nome):
     # Retornando o texto criptografado
     return texto_cripto
 
-def descriptografia_palavras (chave, nome_cifrado):
+def descriptografia_palavras(chave, nome_cifrado):
     # Tabela dos inversos no Z26
-    TABELA = [[1, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23, 25],[1, 9, 21, 15, 3, 19, 7, 23, 11, 5, 17, 25]]
+    TABELA = [[1, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23, 25],
+              [1, 9, 21, 15, 3, 19, 7, 23, 11, 5, 17, 25]]
+
+    T = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 
+         'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
 
     # Obtendo o determinante
-    det = chave[0][0]*chave[1][1] - chave[0][1] * chave[1][0]
-    # Obtendo o equivalente do determinante no conjunto Z6
-    det %= 26
-    # Encontrando o determinante na tabela dos inversos
-    indice_inverso = TABELA[0].index(det)
-    # Encontrando o equivalente do determinante na tabela dos inversos
+    det = chave[0][0] * chave[1][1] - chave[0][1] * chave[1][0]
+    det = det % 26
+    
+    try:
+        indice_inverso = TABELA[0].index(det)
+    except ValueError:
+        raise ValueError("Determinante não tem inverso módulo 26")
+        
     inverso = TABELA[1][indice_inverso]
+    
     # Montando a matriz inversa
-    matriz_inversa = [[chave[1][1]*inverso, chave[0][1]*(-1)*inverso],[chave[1][0]*(-1)*inverso, chave[0][0]*inverso]]
+    matriz_inversa = [
+        [(chave[1][1] * inverso) % 26, (-chave[0][1] * inverso) % 26],
+        [(-chave[1][0] * inverso) % 26, (chave[0][0] * inverso) % 26]
+    ]
 
     nome_cifrado = nome_cifrado.upper().replace(' ', '')
 
-    # Vetor de indexação de decifragem
+    # Convertendo letras para números (1-26)
     V = []
-    # Indexando
-    for i in range (len(nome_cifrado)):
-        pos = T.index(nome_cifrado[i])
-        if pos == '25':
-            V.append(0)
-        else:
-            V.append(pos+1)
-
-    # Declarando a matriz de texto comum
-    P = [[],[]]
-
-    # Indexando
+    for letra in nome_cifrado:
+        pos = T.index(letra)
+        V.append(pos + 1)  # A=1, B=2, ..., Z=26
+    # Criando matriz P
+    P = [[], []]
     for i in range(len(V)):
-        if i%2 == 0:
-            P[0].append(V[i])
-        else:
-            P[1].append(V[i])
+        P[i % 2].append(V[i])
+    # Se P[0] tiver um elemento a mais que P[1], adicione um zero a P[1]
+    if len(P[0]) > len(P[1]):
+        P[1].append(0)  # Adiciona um zero para equilibrar as linhas
+    # Multiplicação manual da matriz inversa por P
+    M = [[], []]
+    for j in range(len(P[0])):
+        M[0].append((matriz_inversa[0][0] * P[0][j] + matriz_inversa[0][1] * P[1][j]) % 26)
+        M[1].append((matriz_inversa[1][0] * P[0][j] + matriz_inversa[1][1] * P[1][j]) % 26)
 
-    # Declarando a matriz de texto comum
-    M = matmul(matriz_inversa,P)
-
-    # Convertendo os valores para os números existentes no conjunto alfabeto
+    # Ajustando valores 0 para 26 (Z)
     for i in range(len(M)):
         for j in range(len(M[0])):
-            M[i][j] %= 26
             if M[i][j] == 0:
                 M[i][j] = 26
 
-    # Declarando o vetor que armazena as letras convertidas
-    TD = []
-
-    # Convertendo os números em letras
-    for i in range(len(M)):
-        for j in range(len(M[0])):
-            TD.append(T[M[i][j]-1])
-
-    # Declarando a matriz a ser usada na exibição
-    descripto = [[],[]]
-
-    # Ajustando as posições das letras na matriz
-    for i in range(int(len(TD)/2)):
-        descripto[0].append(TD[i])
-        descripto[1].append(TD[int(len(TD)/2)+i])
-
-    # Transpondo a matriz para facilitar a exibição
-    descripto = transpose(descripto)
-
-    # Obtendo o texto criptografado
+    # Convertendo números de volta para letras
     texto_descripto = ''
-    for i in range(len(descripto)):
-        for j in range(len(descripto[0])):
-            texto_descripto += descripto[i][j]
+    for j in range(len(M[0])):
+        for i in range(len(M)):
+            texto_descripto += T[M[i][j] - 1]
 
-    # Excluindo a última letra do texto, caso ela seja repetida
-    if texto_descripto[-1] == texto_descripto[-2]:
-        texto_descripto = texto_descripto[:len(texto_descripto)-1]
+    # Removendo possível padding (se a última letra foi repetida)
+    if len(texto_descripto) > 1 and texto_descripto[-1] == texto_descripto[-2]:
+        texto_descripto = texto_descripto[:-1]
 
-    # Adicionando espaçamento para garantir uma melhor exibição dos dados
+    # Adicionando espaços quando necessário
     if texto_descripto == 'BAIXASUSTENTABILIDADE':
         texto_descripto = 'BAIXA SUSTENTABILIDADE'
     elif texto_descripto == 'MODERADASUSTENTABILIDADE':
@@ -165,7 +151,6 @@ def descriptografia_palavras (chave, nome_cifrado):
     elif texto_descripto == 'ALTASUSTENTABILIDADE':
         texto_descripto = 'ALTA SUSTENTABILIDADE'
 
-    # Retornando o texto descriptgrafado
     return texto_descripto
 
 #definição dos valores de S e N
@@ -379,20 +364,29 @@ while opcao != "6":
         print("\n=-=-=-=-= Alterar registros =-=-=-=-=\n")
         
         # Mostrar todos os registros
-        cursor.execute("SELECT ID, DataEntrada, LitrosConsumidos, KWHConsumido, KgNaoReciclaveis, PorcentagemResiduos, MeioDeTransporte FROM ProjetoDeSustentabilidade")
+        cursor.execute("SELECT * FROM ProjetoDeSustentabilidade")
         resultado = cursor.fetchall()
 
-        print('\n=-=-=-=-= Registros disponíveis: =-=-=-=-=\n')
-        print('| ID | Data de registro | Consumo de água | Consumo de energia | Lixo não reciclável | % de resíduos recicláveis | Transportes utilizados\t\t |')
+        print('\n\033[1m=-=-=-=-= Registros disponíveis: =-=-=-=-=\033[0m\n')
+        print('='*143)
+        print(f'\033[1m{"| ID ":^5}', end='|')
+        print(f'{"Data de registro":^20}', end='|')
+        print(f'{"Consumo de água (L)":^20}', end='|')
+        print(f'{"Consumo de energia (kWh)":^25}', end='|')
+        print(f'{"Lixo não reciclável (Kg)":^25}', end='|')
+        print(f'{"% Resíduos recicláveis":^25}', end='|')
+        print(f'{"Meio de transporte":^50}', end='|\033[0m\n')
+        print('='*143)
+
         for linha in resultado:
-            print(f'{linha[0]:<4}', end='\t')
-            print(f'{linha[1]}', end='\t   ')
-            print(f'{linha[2]} L', end='\t\t')
-            print(f'{linha[3]} KwH', end='\t\t\t')
-            print(f'{linha[4]} Kg', end='\t\t\t')
-            print(f'{linha[5]}%', end='\t\t\t\t')
-            print(linha[6])
-            print('-'*162)
+            print(f'{linha[0]:^5}', end='|')
+            print(f'{linha[1]:^20}', end='|')
+            print(f'{str(linha[2]) + " L":^20}', end='|')
+            print(f'{str(linha[3]) + " kWh":^25}', end='|')
+            print(f'{str(linha[4]) + " Kg":^25}', end='|')
+            print(f'{str(linha[5]) + " %":^25}', end='|')
+            print(f'{linha[6]:^20}', end='|\n')
+            print('-'*143)
         
         # Selecionar ID para alteração
         id_alterar = input("\nDigite o ID do registro que deseja alterar: ")
@@ -533,7 +527,7 @@ while opcao != "6":
                 'carona' in meios_de_transporte_str.lower()):
                 nivel_transporte = "Baixa sustentabilidade"
             else:
-                nivel_transporte = "Sem dados suficientes"
+                nivel_transporte = "nenhum"
             
             # Atualizar tabela Manipulacao_Dados
             sql_update_niveis = """
@@ -719,24 +713,30 @@ while opcao != "6":
         input('\n\t<< Tecle Enter para continuar >>')
         os.system('cls' if os.name == 'nt' else 'clear')
 
-    elif opcao == "3":
-        print("\n=-=-=-=-= Apagar registros =-=-=-=-=\n")
-        
-        # Mostrar todos os registros
-        cursor.execute("SELECT ID, DataEntrada, LitrosConsumidos, KWHConsumido, KgNaoReciclaveis, PorcentagemResiduos, MeioDeTransporte FROM ProjetoDeSustentabilidade")
+    elif opcao == "3":      
+        cursor.execute("SELECT * FROM ProjetoDeSustentabilidade")
         resultado = cursor.fetchall()
 
-        print('\n=-=-=-=-= Registros disponíveis: =-=-=-=-=\n')
-        print('| ID | Data de registro | Consumo de água | Consumo de energia | Lixo não reciclável | % de resíduos recicláveis | Transportes utilizados\t\t |')
+        print('\n\033[1m=-=-=-=-= Apagar registros: =-=-=-=-=\033[0m\n')
+        print('='*143)
+        print(f'\033[1m{"| ID ":^5}', end='|')
+        print(f'{"Data de registro":^20}', end='|')
+        print(f'{"Consumo de água (L)":^20}', end='|')
+        print(f'{"Consumo de energia (kWh)":^25}', end='|')
+        print(f'{"Lixo não reciclável (Kg)":^25}', end='|')
+        print(f'{"% Resíduos recicláveis":^25}', end='|')
+        print(f'{"Meio de transporte":^50}', end='|\033[0m\n')
+        print('='*143)
+
         for linha in resultado:
-            print(f'{linha[0]:<4}', end='\t')
-            print(f'{linha[1]}', end='\t   ')
-            print(f'{linha[2]} L', end='\t\t')
-            print(f'{linha[3]} KwH', end='\t\t\t')
-            print(f'{linha[4]} Kg', end='\t\t\t')
-            print(f'{linha[5]}%', end='\t\t\t\t')
-            print(linha[6])
-            print('-'*162)
+            print(f'{linha[0]:^5}', end='|')
+            print(f'{linha[1]:^20}', end='|')
+            print(f'{str(linha[2]) + " L":^20}', end='|')
+            print(f'{str(linha[3]) + " kWh":^25}', end='|')
+            print(f'{str(linha[4]) + " Kg":^25}', end='|')
+            print(f'{str(linha[5]) + " %":^25}', end='|')
+            print(f'{linha[6]:^20}', end='|\n')
+            print('-'*143)
         
         # Selecionar ID para apagar
         id_apagar = input("\nDigite o ID do registro que deseja apagar: ")
@@ -923,24 +923,59 @@ while opcao != "6":
         input('\n\t<< Tecle Enter para continuar >>')
         os.system('cls' if os.name == 'nt' else 'clear')
 
-    #opção de listar registros
+    # opção de listar registros
     elif opcao == "4":
         # Coleta os dados dos registros
-        cursor.execute("SELECT ID, DataEntrada, LitrosConsumidos, KWHConsumido, KgNaoReciclaveis, PorcentagemResiduos, MeioDeTransporte FROM ProjetoDeSustentabilidade")
+        cursor.execute("SELECT * FROM ProjetoDeSustentabilidade")
         resultado = cursor.fetchall()
 
-        print('\n=-=-=-=-= Exibição dos dados de inserção: =-=-=-=-=\n')
-        print('| ID | Data de registro | Consumo de água | Consumo de energia | Lixo não reciclável | % de resíduos recicláveis | Transportes utilizados\t\t |')
-        # print('='*162)
+        print('\n\033[1m=-=-=-=-= Exibição dos dados inseridos: =-=-=-=-=\033[0m\n')
+        print('='*143)
+        print(f'\033[1m{"| ID ":^5}', end='|')
+        print(f'{"Data de registro":^20}', end='|')
+        print(f'{"Consumo de água (L)":^20}', end='|')
+        print(f'{"Consumo de energia (kWh)":^25}', end='|')
+        print(f'{"Lixo não reciclável (Kg)":^25}', end='|')
+        print(f'{"% Resíduos recicláveis":^25}', end='|')
+        print(f'{"Meio de transporte":^50}', end='|\033[0m\n')
+        print('='*143)
+
         for linha in resultado:
-            print(f'{linha[0]:<4}', end='\t')
-            print(f'{linha[1]}', end='\t   ')
-            print(f'{linha[2]} L', end='\t\t')
-            print(f'{linha[3]} KwH', end='\t\t\t')
-            print(f'{linha[4]} Kg', end='\t\t\t')
-            print(f'{linha[5]}%', end='\t\t\t\t')
-            print(linha[6])
-            print('-'*162)
+            print(f'{linha[0]:^5}', end='|')
+            print(f'{linha[1]:^20}', end='|')
+            print(f'{str(linha[2]) + " L":^20}', end='|')
+            print(f'{str(linha[3]) + " kWh":^25}', end='|')
+            print(f'{str(linha[4]) + " Kg":^25}', end='|')
+            print(f'{str(linha[5]) + " %":^25}', end='|')
+            print(f'{linha[6]:^20}', end='|\n')
+            print('-'*143)
+
+        # Aqui você deve adicionar a consulta para Manipulacao_Dados
+        cursor.execute("SELECT * FROM Manipulacao_Dados")
+        resultado_class2 = cursor.fetchall()
+
+        print('\n\033[1m=-=-=-=-= Exibição da classificação dos dados armazenados: =-=-=-=-=\033[0m\n')
+        print('='*143)
+        print(f'\033[1m{"| ID ":^5}', end='|')
+        print(f'{"Consumo de água ":^30}', end='|')
+        print(f'{"Consumo de energia ":^30}', end='|')
+        print(f'{"% de lixo reciclável gerado ":^32}', end='|')
+        print(f'{"Meios de transportes utilizados":^41}', end='|\033[0m\n')
+        print('='*143)
+
+        for i, linha in enumerate(resultado_class2):
+            id_usuario = linha[0]
+            consumo_agua = descriptografia_palavras(chave, linha[1])
+            consumo_energia = descriptografia_palavras(chave, linha[2])
+            lixo_reciclavel = descriptografia_palavras(chave, linha[3])
+            meio_transporte = descriptografia_palavras(chave, linha[4])
+
+            print(f'|{id_usuario:^4}', end='|')
+            print(f'{consumo_agua:^30}', end='|')
+            print(f'{consumo_energia:^30}', end='|')
+            print(f'{lixo_reciclavel:^32}', end='|')
+            print(f'{meio_transporte:^41}', end='|\n')
+            print('-'*143)
 
     #opção para listar a média dos registros
     elif opcao == "5":
