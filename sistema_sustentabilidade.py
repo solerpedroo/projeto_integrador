@@ -163,10 +163,10 @@ opcao = ""
 
 #conexão com o BD
 conexao = mysql.connector.connect(
-host="localhost", # IP ou hostname do servidor MySQL
-user="root", # "login"
-password="@Contardi19", # senha
-database="ProjetoSustentabilidade" # nome do banco (tem que existir)
+host="", # IP ou hostname do servidor MySQL
+user="", # "login"
+password="", # senha
+database="" # nome do banco (tem que existir)
 )
 cursor = conexao.cursor()
 
