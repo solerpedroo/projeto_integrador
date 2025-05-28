@@ -163,10 +163,10 @@ opcao = ""
 
 #conexão com o BD
 conexao = mysql.connector.connect(
-host="", # IP ou hostname do servidor MySQL
-user="", # "login"
-password="", # senha
-database="" # nome do banco (tem que existir)
+host="localhost", # IP ou hostname do servidor MySQL
+user="root", # "login"
+password="@Contardi19", # senha
+database="ProjetoSustentabilidade" # nome do banco (tem que existir)
 )
 cursor = conexao.cursor()
 
@@ -764,8 +764,8 @@ while opcao != "6":
         # Menu de apagar
         print("\nOpções de apagar:")
         print("1. Apagar todos os dados (registro completo)")
-        print("2. Apagar dado específico")
-        print("3. Cancelar")
+        # print("2. Apagar dado específico")
+        print("2. Cancelar")
         opcao_apagar = input("\nEscolha uma opção: ")
         
         if opcao_apagar == "1":
@@ -784,138 +784,8 @@ while opcao != "6":
                     print(f"\nErro ao apagar registro: {err}")
             else:
                 print("\nOperação cancelada.")
-        
+        # opção de cancelar
         elif opcao_apagar == "2":
-            # Apagar dado específico
-            apagar_mais = True
-            while apagar_mais:
-                os.system('cls' if os.name == 'nt' else 'clear')
-                print("\n=-=-=-=-= Apagar dado específico =-=-=-=-=\n")
-                print("Selecione o campo que deseja apagar (definir como NULL/vazio):")
-                print("1. Data")
-                print("2. Consumo de água (litros)")
-                print("3. Consumo de energia (kWh)")
-                print("4. Resíduos não recicláveis (kg)")
-                print("5. Resíduos recicláveis (%)")
-                print("6. Meios de transporte")
-                print("7. Cancelar")
-                
-                campo_apagar = input("\nDigite o número do campo que deseja apagar: ")
-                
-                if campo_apagar == "7":
-                    apagar_mais = False
-                    continue
-                
-                # Mapear campo selecionado para nome da coluna no banco
-                campos = {
-                    "1": "DataEntrada",
-                    "2": "LitrosConsumidos",
-                    "3": "KWHConsumido",
-                    "4": "KgNaoReciclaveis",
-                    "5": "PorcentagemResiduos",
-                    "6": "MeioDeTransporte"
-                }
-                
-                if campo_apagar in campos:
-                    # Confirmar apagar campo específico
-                    confirmacao = input(f"\nTem certeza que deseja apagar o campo {campos[campo_apagar]}? (S/N): ")
-                    if confirmacao.lower() == 's':
-                        try:
-                            # Atualizar campo para NULL
-                            sql_update = f"UPDATE ProjetoDeSustentabilidade SET {campos[campo_apagar]} = NULL WHERE ID = %s"
-                            cursor.execute(sql_update, (id_apagar,))
-                            
-                            # Se apagou algum campo que afeta os cálculos, recalcular níveis
-                            if campo_apagar in ["2", "3", "4", "5", "6"]:
-                                # Obter valores atuais para recálculo
-                                cursor.execute("SELECT LitrosConsumidos, KWHConsumido, KgNaoReciclaveis, PorcentagemResiduos, MeioDeTransporte FROM ProjetoDeSustentabilidade WHERE ID = %s", (id_apagar,))
-                                dados_atuais = cursor.fetchone()
-                                
-                                # Converter valores, tratando NULL como 0 ou string vazia
-                                consumo_litros = float(dados_atuais[0]) if dados_atuais[0] is not None else 0
-                                consumo_kwh = float(dados_atuais[1]) if dados_atuais[1] is not None else 0
-                                geracao_residuos = float(dados_atuais[2]) if dados_atuais[2] is not None else 0
-                                residuos_reciclaveis = float(dados_atuais[3]) if dados_atuais[3] is not None else 0
-                                meios_transporte = dados_atuais[4] if dados_atuais[4] is not None else ""
-                                
-                                # Calcular novos níveis
-                                # Nível de água
-                                if consumo_litros == 0:
-                                    nivel_agua = "Sem dados"
-                                elif consumo_litros > 200:
-                                    nivel_agua = "Baixa sustentabilidade"
-                                elif consumo_litros <= 150:
-                                    nivel_agua = "Alta sustentabilidade"
-                                else:
-                                    nivel_agua = "Moderada sustentabilidade"
-                                
-                                # Nível de energia
-                                if consumo_kwh == 0:
-                                    nivel_energia = "Sem dados"
-                                elif consumo_kwh >= 10:
-                                    nivel_energia = "Baixa sustentabilidade"
-                                elif consumo_kwh <= 5:
-                                    nivel_energia = "Alta sustentabilidade"
-                                else:
-                                    nivel_energia = "Moderada sustentabilidade"
-                                
-                                # Nível de resíduos
-                                if geracao_residuos == 0 or residuos_reciclaveis == 0:
-                                    nivel_residuos = "Sem dados"
-                                else:
-                                    percentual_lixo = (residuos_reciclaveis / geracao_residuos) * 100
-                                    if percentual_lixo < 20:
-                                        nivel_residuos = "Baixa sustentabilidade"
-                                    elif percentual_lixo > 50:
-                                        nivel_residuos = "Alta sustentabilidade"
-                                    else:
-                                        nivel_residuos = "Moderada sustentabilidade"
-                                
-                                # Nível de transporte
-                                if not meios_transporte:
-                                    nivel_transporte = "Sem dados suficientes"
-                                elif ('público' in meios_transporte.lower() or 
-                                    'bicicleta' in meios_transporte.lower() or 
-                                    'caminhada' in meios_transporte.lower() or 
-                                    'elétrico' in meios_transporte.lower()):
-                                    if ('combustível' in meios_transporte.lower() or 
-                                        'carona' in meios_transporte.lower()):
-                                        nivel_transporte = "Moderada sustentabilidade"
-                                    else:
-                                        nivel_transporte = "Alta sustentabilidade"
-                                elif ('combustível' in meios_transporte.lower() or 
-                                    'carona' in meios_transporte.lower()):
-                                    nivel_transporte = "Baixa sustentabilidade"
-                                else:
-                                    nivel_transporte = "Sem dados suficientes"
-                                
-                                # Atualizar tabela Manipulacao_Dados
-                                sql_update_niveis = """
-                                UPDATE Manipulacao_Dados 
-                                SET Nivel_LitrosConsumidos = %s,
-                                    Nivel_KWHConsumido = %s,
-                                    Nivel_KgNaoReciclaveis = %s,
-                                    Nivel_MeioDeTransporte = %s
-                                WHERE ID_Usuario = %s
-                                """
-                                valores_niveis = (nivel_agua, nivel_energia, nivel_residuos, nivel_transporte, id_apagar)
-                                cursor.execute(sql_update_niveis, valores_niveis)
-                            
-                            conexao.commit()
-                            print("\nCampo apagado com sucesso!")
-                        except mysql.connector.Error as err:
-                            conexao.rollback()
-                            print(f"\nErro ao apagar campo: {err}")
-                    else:
-                        print("\nOperação cancelada.")
-                else:
-                    print("\nOpção inválida!")
-                
-                # Perguntar se deseja apagar mais algo
-                continuar = input("\nDeseja apagar mais algum campo neste registro? (S/N): ")
-                if continuar.lower() != 's':
-                    apagar_mais = False
-        elif opcao_apagar == "3":
             print("\nOperação cancelada.")
         else:
             print("\nOpção inválida!")
