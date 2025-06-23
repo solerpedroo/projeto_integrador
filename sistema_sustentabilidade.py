@@ -6,28 +6,35 @@ import numpy as np
 #importar biblioteca para limpar o terminal 
 import os
 
-# Declarando a tabela do alfabeto
+# Declaração da tabela do alfabeto
 T = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
 
+#chave usada para a criptografia
 chave = [[4,3],[1,2]]
 
+#declarando a função de criptografia usada no código
 def criptografia_palavras(chave, nome):
 
+    # deixa a palavra recebida em maiuculo e remove os espaços, padronizando a entrada
     nome = nome.upper().replace(' ', '')
 
     # Vetor de indexação
     I = []
 
-    # Indexando
+    # converte as letras da palavra em números de acordo com a posição do vetor T (alfabeto)
     for i in range (len(nome)):
+        #obtém a posição do vetor T que corresponde a letra atual do loop do for
         pos = T.index(nome[i])
         if pos == '25':
+            # atribui 0 se a letra for 'Z' (pos25)
             I.append(0)
         else:
+            #atribui o valor + 1 ==> vetor começa com 0 e cifra de hill com 1
             I.append(pos+1)   
 
     # Caso a palavra tenha um tamanho ímpar, repete a última letra 
     if len(nome)%2 != 0:
+        #pega a ultima letra da palavra
         pos = T.index(nome[-1])
         if pos == '25':
             I.append(0)
@@ -37,14 +44,16 @@ def criptografia_palavras(chave, nome):
     # Declarando a matriz de texto comum
     P = [[],[]]
 
-    # Indexan
+    # converte o vetor de indexação em uma matriz 2xn
     for i in range(len(I)):
         if i%2 == 0:
+            #atribui as letras de posição par na linha superior da matriz P
             P[0].append(I[i])
         else:
+            #atribui as letras de posição impar na linha inferior da matriz P
             P[1].append(I[i])
 
-    # Obtendo a matriz de texto cifrado
+    # Obtendo a matriz de texto cifrado pela multiplicação da chave pela matriz de texto comum P
     C = matmul(chave, P)
 
     # Convertendo os valores para os números existentes no conjunto alfabeto
@@ -54,20 +63,23 @@ def criptografia_palavras(chave, nome):
             if C[i][j] == 0:
                 C[i][j] = 26
 
-    # Declarando o vetor que armazena as letras convertidas
+    # vetor que armazenará as letras cifradas
     TC = []
 
     # Convertendo os números em letras
     for i in range(len(C)):
         for j in range(len(C[0])):
+            #obtém a letra a partir do número convertido -1, no caso que representa o índice da letra no alfabeto (T)
             TC.append(T[C[i][j]-1])
 
     # Declarando a matriz a ser usada na exibição
     cripto = [[],[]]
 
-    # Ajustando as posições das letras na matriz
+    # Ajuste das posições das letras na matriz
     for i in range(int(len(TC)/2)):
+        #atribui a primeira linha uma parte do texto ==> ex: carros = linha 0: car, linha 1: ros
         cripto[0].append(TC[i])
+        #atribui a segunda linha a outra parte do texto
         cripto[1].append(TC[int(len(TC)/2)+i])
 
     # Transpondo a matriz para facilitar a exibição
@@ -82,68 +94,83 @@ def criptografia_palavras(chave, nome):
     # Retornando o texto criptografado
     return texto_cripto
 
+#declaração da matriz de descriptografia usada no código
 def descriptografia_palavras(chave, nome_cifrado):
-    # Tabela dos inversos no Z26
-    TABELA = [[1, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23, 25],
-              [1, 9, 21, 15, 3, 19, 7, 23, 11, 5, 17, 25]]
+    # Tabela que armazena os determinantes que possuem inverso no conjunto Z26 e seus respectivos inversos.
+    # Exemplo: O número 3 tem como inverso o número 9 no conjunto módulo 26.
+    TABELA = [[1, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23, 25],  # determinantes possíveis
+              [1, 9, 21, 15, 3, 19, 7, 23, 11, 5, 17, 25]]  # inversos correspondentes
 
-    T = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 
+    # Vetor auxiliar que associa cada letra do alfabeto a uma posição (A=0, B=1, ..., Z=25)
+    T = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
          'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
 
-    # Obtendo o determinante
+    # Calculando o determinante da matriz de chave
     det = chave[0][0] * chave[1][1] - chave[0][1] * chave[1][0]
+
+    # Ajustando o determinante para o módulo 26 (Z26)
     det = det % 26
-    
+
+    # Tentando encontrar o inverso do determinante na tabela
     try:
         indice_inverso = TABELA[0].index(det)
     except ValueError:
+        # Se o determinante não tiver inverso, não é possível descriptografar
         raise ValueError("Determinante não tem inverso módulo 26")
-        
+
+    # Obtém o inverso do determinante a partir da tabela
     inverso = TABELA[1][indice_inverso]
-    
-    # Montando a matriz inversa
+
+    # Calcula a matriz inversa no conjunto Z26
     matriz_inversa = [
         [(chave[1][1] * inverso) % 26, (-chave[0][1] * inverso) % 26],
         [(-chave[1][0] * inverso) % 26, (chave[0][0] * inverso) % 26]
     ]
 
+    # Padroniza a palavra cifrada: transforma em maiúsculas e remove espaços
     nome_cifrado = nome_cifrado.upper().replace(' ', '')
 
-    # Convertendo letras para números (1-26)
+    # Cria um vetor para armazenar as posições numéricas das letras cifradas
     V = []
+
+    # Converte cada letra para o seu valor numérico (A=1, B=2, ..., Z=26)
     for letra in nome_cifrado:
-        pos = T.index(letra)
-        V.append(pos + 1)  # A=1, B=2, ..., Z=26
-    # Criando matriz P
+        pos = T.index(letra)  # Encontra a posição da letra no vetor T
+        V.append(pos + 1)     # Soma 1 para o sistema começar em A=1
+
+    # Cria a matriz P, que separa os números em duas linhas de forma alternada
     P = [[], []]
     for i in range(len(V)):
-        P[i % 2].append(V[i])
-    # Se P[0] tiver um elemento a mais que P[1], adicione um zero a P[1]
+        P[i % 2].append(V[i])  # Alterna entre as linhas 0 e 1
+
+    # Se houver um elemento a mais na primeira linha, adiciona um zero na segunda para equilibrar a matriz
     if len(P[0]) > len(P[1]):
-        P[1].append(0)  # Adiciona um zero para equilibrar as linhas
-    # Multiplicação manual da matriz inversa por P
+        P[1].append(0)
+
+    # Cria a matriz M que armazenará o resultado da multiplicação da matriz inversa pela matriz P
     M = [[], []]
     for j in range(len(P[0])):
+        # Calcula manualmente o produto das matrizes e aplica módulo 26
         M[0].append((matriz_inversa[0][0] * P[0][j] + matriz_inversa[0][1] * P[1][j]) % 26)
         M[1].append((matriz_inversa[1][0] * P[0][j] + matriz_inversa[1][1] * P[1][j]) % 26)
 
-    # Ajustando valores 0 para 26 (Z)
+    # Substitui valores zero por 26 para garantir que a letra Z seja corretamente mapeada
     for i in range(len(M)):
         for j in range(len(M[0])):
             if M[i][j] == 0:
                 M[i][j] = 26
 
-    # Convertendo números de volta para letras
+    # Converte os números da matriz M de volta para letras
     texto_descripto = ''
     for j in range(len(M[0])):
         for i in range(len(M)):
-            texto_descripto += T[M[i][j] - 1]
+            texto_descripto += T[M[i][j] - 1]  # Subtrai 1 pois o vetor T começa em zero
 
-    # Removendo possível padding (se a última letra foi repetida)
+    # Remove padding: se a última letra for repetida, provavelmente foi adicionada para completar a matriz
     if len(texto_descripto) > 1 and texto_descripto[-1] == texto_descripto[-2]:
         texto_descripto = texto_descripto[:-1]
 
-    # Adicionando espaços quando necessário
+    # Caso o texto descriptografado corresponda a uma das mensagens esperadas, adiciona o espaço correto
     if texto_descripto == 'BAIXASUSTENTABILIDADE':
         texto_descripto = 'BAIXA SUSTENTABILIDADE'
     elif texto_descripto == 'MODERADASUSTENTABILIDADE':
@@ -151,6 +178,7 @@ def descriptografia_palavras(chave, nome_cifrado):
     elif texto_descripto == 'ALTASUSTENTABILIDADE':
         texto_descripto = 'ALTA SUSTENTABILIDADE'
 
+    # Retorna o texto final descriptografado
     return texto_descripto
 
 #definição dos valores de S e N
